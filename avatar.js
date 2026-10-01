@@ -123,7 +123,7 @@ function loadAvatarOutfit(date){
 }
 
 const colorPresets=[
-  ['WHITE','#f0eded'],['BLACK','#2b2930'],['BROWN','#79513c'],['BLONDE','#e4c56f'],
+  ['WHITE','#f0eded'],['BLACK','#2b2930'],['BROWN','#604F45'],['BLONDE','#e4c56f'],
   ['PINK','#e79fba'],['BLUE','#789bd0'],['RED','#bf6670'],['PURPLE','#9a7dbc']
 ];
 
