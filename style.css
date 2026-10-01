@@ -43,8 +43,9 @@ aside section>label:before,article>label:before{margin-right:7px;transform:scale
 #avatar .avatar-outfit,#dressAvatar .avatar-outfit{z-index:2}
 #avatar .avatar-hair,#dressAvatar .avatar-hair{z-index:3}
 #avatar .avatar-eyes,#dressAvatar .avatar-eyes{z-index:4}
-#avatar .avatar-mouth,#dressAvatar .avatar-mouth{z-index:5}
-#avatar .avatar-accessory,#dressAvatar .avatar-accessory{position:absolute;inset:0;z-index:6;pointer-events:none}
+#avatar .avatar-highlight,#dressAvatar .avatar-highlight{z-index:5}
+#avatar .avatar-mouth,#dressAvatar .avatar-mouth{z-index:6}
+#avatar .avatar-accessory,#dressAvatar .avatar-accessory{position:absolute;inset:0;z-index:7;pointer-events:none}
 #dressUp{display:block;width:100%;margin-top:10px;padding:9px;background:#f3eaff;border-color:#b8a9db;color:#6e6192;letter-spacing:.12em}
 main.dress-room-open>header,main.dress-room-open>.layout{display:none}
 #dressRoom{max-width:760px;margin:0 auto;padding:18px;background:#fff;border:2px solid #aebbd8;box-shadow:5px 5px 0 #e5e9f3;text-align:center}

@@ -5,6 +5,7 @@ const avatarParts={
   outfit:{folder:'outfit',files:['outfit01','outfit02','outfit03','outfit04','outfit05','outfit06','outfit07','outfit08','outfit09','outfit10','outfit11','outfit12','outfit13','outfit14']},
   accessory:{folder:'accessory',files:['acc01','acc02','acc03','acc04','acc05','acc06','acc07','acc08','acc09','acc10']}
 };
+const avatarHighlights={folder:'highlight',files:['highlight01','highlight02']};
 
 const avatarStorageKey='my-little-day-v3-avatar';
 const avatarOutfitStorageKey='my-little-day-v3-avatar-outfits';
@@ -12,20 +13,29 @@ const defaultAvatarColor='#f0eded';
 const readAvatarStorage=storageKey=>{
   try{const parsed=JSON.parse(localStorage.getItem(storageKey)||'null');return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{}}catch{return{}}
 };
-const hasAvatarFields=value=>value&&typeof value==='object'&&!Array.isArray(value)&&['hair','eyes','mouth','outfit','accessories','hairColor','eyeColor'].some(field=>Object.prototype.hasOwnProperty.call(value,field));
+const hasAvatarFields=value=>value&&typeof value==='object'&&!Array.isArray(value)&&['hair','eyes','eyeHighlight','mouth','outfit','accessories','hairColor','eyeColor'].some(field=>Object.prototype.hasOwnProperty.call(value,field));
 const normalizeAvatarSnapshot=value=>{
   const source=hasAvatarFields(value)?value:{};
   const part=type=>avatarParts[type].files.includes(source[type])?source[type]:'';
   const color=field=>/^#[0-9a-f]{6}$/i.test(source[field])?source[field].toLowerCase():defaultAvatarColor;
-  return {hair:part('hair'),eyes:part('eyes'),mouth:part('mouth'),outfit:part('outfit'),accessories:Array.isArray(source.accessories)?[...new Set(source.accessories.filter(file=>avatarParts.accessory.files.includes(file)))]:[],hairColor:color('hairColor'),eyeColor:color('eyeColor')};
+  return {hair:part('hair'),eyes:part('eyes'),eyeHighlight:avatarHighlights.files.includes(source.eyeHighlight)?source.eyeHighlight:'',mouth:part('mouth'),outfit:part('outfit'),accessories:Array.isArray(source.accessories)?[...new Set(source.accessories.filter(file=>avatarParts.accessory.files.includes(file)))]:[],hairColor:color('hairColor'),eyeColor:color('eyeColor')};
 };
 let fallbackAvatar=normalizeAvatarSnapshot(readAvatarStorage(avatarStorageKey));
 let avatarOutfits=readAvatarStorage(avatarOutfitStorageKey);
-const avatarSelection={hair:fallbackAvatar.hair,eyes:fallbackAvatar.eyes,mouth:fallbackAvatar.mouth,outfit:fallbackAvatar.outfit,accessory:[...fallbackAvatar.accessories]};
+const avatarSelection={hair:fallbackAvatar.hair,eyes:fallbackAvatar.eyes,eyeHighlight:fallbackAvatar.eyeHighlight,mouth:fallbackAvatar.mouth,outfit:fallbackAvatar.outfit,accessory:[...fallbackAvatar.accessories]};
 const avatarColors={hair:fallbackAvatar.hairColor,eye:fallbackAvatar.eyeColor};
 let activeAvatarPart='hair';
 const avatarPath=(part,file)=>`avatar-assets/${avatarParts[part].folder}/${file}.png`;
+const avatarHighlightPath=file=>`avatar-assets/${avatarHighlights.folder}/${file}.png`;
 const avatarRoots=['avatar','dress-avatar'];
+avatarRoots.forEach(root=>{
+  const highlight=document.createElement('img');
+  highlight.id=`${root}-highlight`;
+  highlight.className='avatar-layer avatar-highlight';
+  highlight.alt='';
+  highlight.hidden=true;
+  document.getElementById(`${root}-eyes`).after(highlight);
+});
 
 const tintedLayerCache=new Map();
 let avatarRenderVersion=0;
@@ -90,7 +100,7 @@ function renderColorLayer(part,file,color,renderVersion){
 function renderAvatar(){
   const renderVersion=++avatarRenderVersion;
   Object.entries(avatarSelection).forEach(([part,src])=>avatarRoots.forEach(root=>{
-    const layer=document.getElementById(`${root}-${part}`);
+    const layer=document.getElementById(`${root}-${part==='eyeHighlight'?'highlight':part}`);
     if(part==='accessory'){
       layer.innerHTML=src.map(file=>`<img class="avatar-layer avatar-accessory-layer" src="${avatarPath(part,file)}" alt="">`).join('');
       layer.hidden=!src.length;
@@ -98,17 +108,19 @@ function renderAvatar(){
   }));
   if(avatarSelection.hair)renderColorLayer('hair',avatarSelection.hair,avatarColors.hair,renderVersion);
   if(avatarSelection.eyes)renderColorLayer('eyes',avatarSelection.eyes,avatarColors.eye,renderVersion);
+  if(avatarSelection.eyeHighlight)setAvatarImageLayer('highlight',avatarHighlightPath(avatarSelection.eyeHighlight));
   ['mouth','outfit'].forEach(part=>{if(avatarSelection[part])setAvatarImageLayer(part,avatarPath(part,avatarSelection[part]))});
 }
 
 function createAvatarSnapshot(){
-  return {hair:avatarSelection.hair,eyes:avatarSelection.eyes,mouth:avatarSelection.mouth,outfit:avatarSelection.outfit,accessories:[...avatarSelection.accessory],hairColor:avatarColors.hair,eyeColor:avatarColors.eye};
+  return {hair:avatarSelection.hair,eyes:avatarSelection.eyes,eyeHighlight:avatarSelection.eyeHighlight,mouth:avatarSelection.mouth,outfit:avatarSelection.outfit,accessories:[...avatarSelection.accessory],hairColor:avatarColors.hair,eyeColor:avatarColors.eye};
 }
 
 function applyAvatarSnapshot(snapshot){
   const restored=normalizeAvatarSnapshot(snapshot);
   avatarSelection.hair=restored.hair;
   avatarSelection.eyes=restored.eyes;
+  avatarSelection.eyeHighlight=restored.eyeHighlight;
   avatarSelection.mouth=restored.mouth;
   avatarSelection.outfit=restored.outfit;
   avatarSelection.accessory=[...restored.accessories];
@@ -138,7 +150,7 @@ function renderColorControls(){
 function renderDressOptions(){
   const files=avatarParts[activeAvatarPart].files;
   const selected=activeAvatarPart==='accessory'?avatarSelection.accessory:[];
-  const options=[`<button type="button" class="avatar-option avatar-option--none ${activeAvatarPart==='accessory'?(!selected.length?'selected':''):(!avatarSelection[activeAvatarPart]?'selected':'')}" data-avatar-file="">NONE</button>`,...files.map(file=>`<button type="button" class="avatar-option ${activeAvatarPart==='accessory'?(selected.includes(file)?'selected':''):(avatarSelection[activeAvatarPart]===file?'selected':'')}" data-avatar-file="${file}" aria-label="${activeAvatarPart} ${file}"><img src="${avatarPath(activeAvatarPart,file)}" alt=""></button>`)].join('');
+  const options=activeAvatarPart==='eyes'?[`<button type="button" class="avatar-option avatar-option--none ${!avatarSelection.eyes?'selected':''}" data-avatar-file="">NONE</button>`,...files.map(file=>`<button type="button" class="avatar-option ${avatarSelection.eyes===file?'selected':''}" data-avatar-file="${file}" aria-label="eyes ${file}"><img src="${avatarPath('eyes',file)}" alt=""></button>`),...avatarHighlights.files.map(file=>`<button type="button" class="avatar-option ${avatarSelection.eyeHighlight===file?'selected':''}" data-avatar-highlight="${file}" aria-label="highlight ${file}"><img src="${avatarHighlightPath(file)}" alt=""></button>`)].join(''):[`<button type="button" class="avatar-option avatar-option--none ${activeAvatarPart==='accessory'?(!selected.length?'selected':''):(!avatarSelection[activeAvatarPart]?'selected':'')}" data-avatar-file="">NONE</button>`,...files.map(file=>`<button type="button" class="avatar-option ${activeAvatarPart==='accessory'?(selected.includes(file)?'selected':''):(avatarSelection[activeAvatarPart]===file?'selected':'')}" data-avatar-file="${file}" aria-label="${activeAvatarPart} ${file}"><img src="${avatarPath(activeAvatarPart,file)}" alt=""></button>`)].join('');
   document.getElementById('dressOptions').innerHTML=`<div class="dress-part-options">${options}</div>${renderColorControls()}`;
 }
 
@@ -168,6 +180,14 @@ document.getElementById('dressOptions').onclick=e=>{
     const colorKey=activeAvatarPart==='hair'?'hair':activeAvatarPart==='eyes'?'eye':'';
     if(!colorKey)return;
     avatarColors[colorKey]=colorButton.dataset.avatarColor;
+    renderAvatar();
+    renderDressOptions();
+    return;
+  }
+  const highlightOption=e.target.closest('[data-avatar-highlight]');
+  if(highlightOption){
+    const file=highlightOption.dataset.avatarHighlight;
+    avatarSelection.eyeHighlight=avatarSelection.eyeHighlight===file?'':file;
     renderAvatar();
     renderDressOptions();
     return;
