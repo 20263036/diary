@@ -1,9 +1,9 @@
 const avatarParts={
-  hair:{folder:'hair',files:['hair01','hair02','hair03','hair04','hair05','hair06']},
+  hair:{folder:'hair',files:['hair01','hair02','hair03','hair04','hair05','hair06','hair07','hair08','hair09']},
   eyes:{folder:'eyes',files:['eyes01','eyes02','eyes03']},
   mouth:{folder:'mouth',files:['mouth01','mouth02','mouth03','mouth04']},
-  outfit:{folder:'outfit',files:['outfit01','outfit02','outfit03','outfit04','outfit05','outfit06']},
-  accessory:{folder:'accessory',files:['acc01','acc02','acc03','acc04','acc05','acc06','acc07']}
+  outfit:{folder:'outfit',files:['outfit01','outfit02','outfit03','outfit04','outfit05','outfit06','outfit07','outfit08','outfit09','outfit10','outfit11','outfit12','outfit13','outfit14']},
+  accessory:{folder:'accessory',files:['acc01','acc02','acc03','acc04','acc05','acc06','acc07','acc08','acc09','acc10']}
 };
 
 const avatarStorageKey='my-little-day-v3-avatar';
