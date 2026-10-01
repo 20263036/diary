@@ -7,15 +7,22 @@ const avatarParts={
 };
 
 const avatarStorageKey='my-little-day-v3-avatar';
+const avatarOutfitStorageKey='my-little-day-v3-avatar-outfits';
 const defaultAvatarColor='#f0eded';
-const savedAvatar=(()=>{
-  try{const parsed=JSON.parse(localStorage.getItem(avatarStorageKey)||'null');return parsed&&typeof parsed==='object'?parsed:{}}catch{return{}}
-})();
-const restoredPart=part=>avatarParts[part].files.includes(savedAvatar[part])?savedAvatar[part]:'';
-const restoredAccessories=Array.isArray(savedAvatar.accessories)?[...new Set(savedAvatar.accessories.filter(file=>avatarParts.accessory.files.includes(file)))]:[];
-const restoredColor=color=>/^#[0-9a-f]{6}$/i.test(savedAvatar[color])?savedAvatar[color].toLowerCase():defaultAvatarColor;
-const avatarSelection={hair:restoredPart('hair'),eyes:restoredPart('eyes'),mouth:restoredPart('mouth'),outfit:restoredPart('outfit'),accessory:restoredAccessories};
-const avatarColors={hair:restoredColor('hairColor'),eye:restoredColor('eyeColor')};
+const readAvatarStorage=storageKey=>{
+  try{const parsed=JSON.parse(localStorage.getItem(storageKey)||'null');return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{}}catch{return{}}
+};
+const hasAvatarFields=value=>value&&typeof value==='object'&&!Array.isArray(value)&&['hair','eyes','mouth','outfit','accessories','hairColor','eyeColor'].some(field=>Object.prototype.hasOwnProperty.call(value,field));
+const normalizeAvatarSnapshot=value=>{
+  const source=hasAvatarFields(value)?value:{};
+  const part=type=>avatarParts[type].files.includes(source[type])?source[type]:'';
+  const color=field=>/^#[0-9a-f]{6}$/i.test(source[field])?source[field].toLowerCase():defaultAvatarColor;
+  return {hair:part('hair'),eyes:part('eyes'),mouth:part('mouth'),outfit:part('outfit'),accessories:Array.isArray(source.accessories)?[...new Set(source.accessories.filter(file=>avatarParts.accessory.files.includes(file)))]:[],hairColor:color('hairColor'),eyeColor:color('eyeColor')};
+};
+let fallbackAvatar=normalizeAvatarSnapshot(readAvatarStorage(avatarStorageKey));
+let avatarOutfits=readAvatarStorage(avatarOutfitStorageKey);
+const avatarSelection={hair:fallbackAvatar.hair,eyes:fallbackAvatar.eyes,mouth:fallbackAvatar.mouth,outfit:fallbackAvatar.outfit,accessory:[...fallbackAvatar.accessories]};
+const avatarColors={hair:fallbackAvatar.hairColor,eye:fallbackAvatar.eyeColor};
 let activeAvatarPart='hair';
 const avatarPath=(part,file)=>`avatar-assets/${avatarParts[part].folder}/${file}.png`;
 const avatarRoots=['avatar','dress-avatar'];
@@ -94,6 +101,27 @@ function renderAvatar(){
   ['mouth','outfit'].forEach(part=>{if(avatarSelection[part])setAvatarImageLayer(part,avatarPath(part,avatarSelection[part]))});
 }
 
+function createAvatarSnapshot(){
+  return {hair:avatarSelection.hair,eyes:avatarSelection.eyes,mouth:avatarSelection.mouth,outfit:avatarSelection.outfit,accessories:[...avatarSelection.accessory],hairColor:avatarColors.hair,eyeColor:avatarColors.eye};
+}
+
+function applyAvatarSnapshot(snapshot){
+  const restored=normalizeAvatarSnapshot(snapshot);
+  avatarSelection.hair=restored.hair;
+  avatarSelection.eyes=restored.eyes;
+  avatarSelection.mouth=restored.mouth;
+  avatarSelection.outfit=restored.outfit;
+  avatarSelection.accessory=[...restored.accessories];
+  avatarColors.hair=restored.hairColor;
+  avatarColors.eye=restored.eyeColor;
+  renderAvatar();
+}
+
+function loadAvatarOutfit(date){
+  const outfit=avatarOutfits[date];
+  applyAvatarSnapshot(hasAvatarFields(outfit)?outfit:fallbackAvatar);
+}
+
 const colorPresets=[
   ['WHITE','#f0eded'],['BLACK','#2b2930'],['BROWN','#79513c'],['BLONDE','#e4c56f'],
   ['PINK','#e79fba'],['BLUE','#789bd0'],['RED','#bf6670'],['PURPLE','#9a7dbc']
@@ -165,9 +193,24 @@ document.getElementById('dressOptions').oninput=e=>{
 };
 
 document.getElementById('dressSave').onclick=()=>{
-  localStorage.setItem(avatarStorageKey,JSON.stringify({hair:avatarSelection.hair,eyes:avatarSelection.eyes,mouth:avatarSelection.mouth,outfit:avatarSelection.outfit,accessories:[...avatarSelection.accessory],hairColor:avatarColors.hair,eyeColor:avatarColors.eye}));
+  const snapshot=createAvatarSnapshot();
+  fallbackAvatar=snapshot;
+  localStorage.setItem(avatarStorageKey,JSON.stringify(snapshot));
+  const selectedDay=document.querySelector('#grid .day.selected[data-date]');
+  if(selectedDay){
+    avatarOutfits[selectedDay.dataset.date]={...snapshot,accessories:[...snapshot.accessories]};
+    localStorage.setItem(avatarOutfitStorageKey,JSON.stringify(avatarOutfits));
+  }
   document.getElementById('dressRoom').hidden=true;
   document.querySelector('main').classList.remove('dress-room-open');
 };
 
-renderAvatar();
+document.getElementById('grid').addEventListener('click',event=>{
+  const day=event.target.closest('.day[data-date]');
+  if(!day||day.disabled)return;
+  loadAvatarOutfit(day.dataset.date);
+});
+
+const initiallySelectedDay=document.querySelector('#grid .day.selected[data-date]');
+if(initiallySelectedDay)loadAvatarOutfit(initiallySelectedDay.dataset.date);
+else renderAvatar();
